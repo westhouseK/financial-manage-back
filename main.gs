@@ -23,7 +23,7 @@ function doPost(e) {
     
     Logger.log('Familyをcache');
 
-    replyText = '2人の家計簿に入力できるよ！';
+    replyText = '2人の家計簿に入力できるよ！\nフォーマット《食費 1000 備考》\n※備考はなしでも大丈夫';
 
   } else if (message.text === 'Me') {
 
@@ -32,18 +32,20 @@ function doPost(e) {
 
     Logger.log('Meをcacheに入れる');
 
-    replyText = `${getUser(userId).name}の家計簿に入力できるよ！`;
+    replyText = `${getUserName(source.userId)}の家計簿に入力できるよ！でもまだ個人の家計簿は使えないんだ！！`;
 
   } else if (type === "message") {
 
-    resister(source.userId, message.text);
-
-    replyText = message.text;
+    try {
+      resister(source.userId, message.text);
+      replyText = `《${message.text}》の登録に完了したよ！`;
+    } catch (e) {
+      replyText = e.message;
+    }
   }
+  
+  reply(replyText, replyToken);
 
-  if(type === "message") {
-    reply(replyText, replyToken);
-  }
 }
 
 /*
@@ -77,31 +79,42 @@ function reply(messageText, replyToken) {
 }
 
 function resister(userId, messageText) {
+  // FIXME: ここに書くべきでは気もする
+  const cache = CacheService.getScriptCache();
 
   // cacheの判定
+  if (cache.get(userId) === null) throw new Error('入力する家計簿を選択してね！')
+  if (cache.get(userId) === 'Me') throw new Error('個人の家計簿はまだ使えないんだ。。')
 
-  // 値のバリデーション
+  // 半角スペース・全角スペース・改行コード・、・。で区切る
+  const [category, expense, remarks] = messageText.split(/[\s|\u3000|、|。|\n]/g);
+  // TODO: expenseを全角でも対応できるようにする
 
-  // スペースとかで区切る？？
-  const [expenxseDate, category, expense] = messageText.split(/[\s、。\n]/g);
-  // TODO: 年をまたいだ時バグるので検討する
+  // カテゴリのバリエーション
+  if (!Category.some(ele => ele === category)) throw new Error('想定外のカテゴリです！')
+  // 出費のバリエーション
+
+  // 備考のバリエーション
+
+
+  // 入力日をシステム値から取得
   const year = new Date().getFullYear();
-  // TODO: 月をまだいだ時どうしよう
   const month = new Date().getMonth()+1;
+  const date = new Date().getDate()
 
-  // 入力するシートを取得
-  const sheet_id = getSheetId('both');
+  // 入力するシートの情報を取得 TODO: 整理する
+  const sheet_id = getSheetId(cache.get(userId));
   const ss = SpreadsheetApp.openById(sheet_id);
   const sheet = ss.getSheetByName(`${year}/${month}`);
 
-
   const resisterRow = sheet.getRange(1, 4).getNextDataCell(SpreadsheetApp.Direction.DOWN).getRow() + 1;
   
-  // シートに出力する
-  sheet.getRange(`D${resisterRow}`).setValue(expenxseDate);
-  sheet.getRange(`E${resisterRow}`).setValue(getUser(userId).name);
+  // シートに出力する TODO: こんな書き方しかできない？
+  sheet.getRange(`D${resisterRow}`).setValue(date);
+  sheet.getRange(`E${resisterRow}`).setValue(getUserName(userId));
   sheet.getRange(`F${resisterRow}`).setValue(category);
   sheet.getRange(`H${resisterRow}`).setValue(expense);
+  sheet.getRange(`I${resisterRow}`).setValue(remarks ?? '');
 
   // ログを履く
 
@@ -109,5 +122,5 @@ function resister(userId, messageText) {
 }
 
 function test() {
-  
+  Logger.log("");
 }
