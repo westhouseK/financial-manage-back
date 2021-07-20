@@ -79,7 +79,7 @@ function reply(messageText, replyToken) {
 }
 
 function resister(userId, messageText) {
-  // FIXME: ここに書くべきでは気もする
+  // FIXME: ここに書くべきでは気がする
   const cache = CacheService.getScriptCache();
 
   // cacheの判定
