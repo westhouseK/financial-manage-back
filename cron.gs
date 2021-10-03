@@ -5,7 +5,7 @@
 function createSheet() {
 
   // TODO: 共有のシート以外もセットする
-  const spreadSheet = SpreadsheetApp.openById(getSheetId('Family'));
+  const spreadSheet = SpreadsheetApp.openById(getSheetId(''));
   const templateSheet = spreadSheet.getSheetByName(TEMPLATE_SHEET);
   const year = new Date().getFullYear();
   const month = new Date().getMonth()+1;

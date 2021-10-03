@@ -1,6 +1,6 @@
 function doPost(e) {
 
-  // TODO: LINEかNuxtかによって、newするオブジェクトを変更
+  // TODO: LINEかNextかによって、newするオブジェクトを変更
 
   // LINE 
   // １つ目の要素を取得
@@ -14,38 +14,33 @@ function doPost(e) {
 
   // バリデーション
 
-  const cache = CacheService.getScriptCache();
   let replyText = '';
+  // LINE下部のボタンが押された時、Family
   if (message.text === 'Family') {
     
-    // キャッシュに入れる 10分くらい??
-    cache.put(source.userId, message.text, 60 * 10);
+    // modeをキャッシュする
+    CACHE.put(source.userId, message.text, CACHE_TIME); 
     
-    Logger.log('Familyをcache');
-
-    replyText = '2人の家計簿に入力できるよ！\nフォーマット《食費 1000 備考》\n※備考はなしでも大丈夫';
-
+    replyText = `2人の家計簿に入力できるよ！\nフォーマット《食費 1000 備考》\n※備考はなしでも大丈夫`;
+    
+  // LINE下部のボタンが押された時、Me
   } else if (message.text === 'Me') {
 
-    // キャッシュに入れる 10分くらい??
-    cache.put(source.userId, message.text, 60 * 10);
-
-    Logger.log('Meをcacheに入れる');
-
-    replyText = `${getUserName(source.userId)}の家計簿に入力できるよ！でもまだ個人の家計簿は使えないんだ！！`;
+    replyText = "また使えないんだ。。";
 
   } else if (type === "message") {
 
+    // TODO: Cacheが'Family' or 'Me'で判定する
     try {
       resister(source.userId, message.text);
-      replyText = `《${message.text}》の登録に完了したよ！`;
+      const balance = getBalance(source.userId);
+      replyText = getSuccessMessage(message.text, balance);
     } catch (e) {
       replyText = e.message;
     }
   }
   
   reply(replyText, replyToken);
-
 }
 
 /*
@@ -79,48 +74,76 @@ function reply(messageText, replyToken) {
 }
 
 function resister(userId, messageText) {
-  // FIXME: ここに書くべきでは気がする
-  const cache = CacheService.getScriptCache();
+  
+  // キャッシュの判定
+  // ハンドリングは先にやる
+  if (CACHE.get(userId) === null) throw new Error('入力する家計簿を選択してね！')
+  if (CACHE.get(userId) === 'Me') throw new Error('Meはまだ使えないんだ。。')
 
-  // cacheの判定
-  if (cache.get(userId) === null) throw new Error('入力する家計簿を選択してね！')
-  if (cache.get(userId) === 'Me') throw new Error('個人の家計簿はまだ使えないんだ。。')
-
-  // 半角スペース・全角スペース・改行コード・、・。で区切る
+  // 「半角スペース・全角スペース・改行コード・、・。」で区切る
   const [category, expense, remarks] = messageText.split(/[\s|\u3000|、|。|\n]/g);
-  // TODO: expenseを全角でも対応できるようにする
+  // TODO: 出費(expense)を全角でも対応できるようにする
 
   // カテゴリのバリエーション
   if (!Category.some(ele => ele === category)) throw new Error('想定外のカテゴリです！')
-  // 出費のバリエーション
+  // TODO: 出費のバリエーション
 
-  // 備考のバリエーション
+  // TODO: 備考のバリエーション
 
-
+  // TODO: 共通化
   // 入力日をシステム値から取得
   const year = new Date().getFullYear();
   const month = new Date().getMonth()+1;
   const date = new Date().getDate()
 
-  // 入力するシートの情報を取得 TODO: 整理する
-  const sheet_id = getSheetId(cache.get(userId));
+  // 入力するシートの情報を取得
+  const sheet_id = getFamilySheetId();
   const ss = SpreadsheetApp.openById(sheet_id);
   const sheet = ss.getSheetByName(`${year}/${month}`);
 
+  // FIXME: 行がないと、1001行目になる
   const resisterRow = sheet.getRange(1, 4).getNextDataCell(SpreadsheetApp.Direction.DOWN).getRow() + 1;
   
-  // シートに出力する TODO: こんな書き方しかできない？
+  // シートに出力する
   sheet.getRange(`D${resisterRow}`).setValue(date);
   sheet.getRange(`E${resisterRow}`).setValue(getUserName(userId));
   sheet.getRange(`F${resisterRow}`).setValue(category);
   sheet.getRange(`H${resisterRow}`).setValue(expense);
   sheet.getRange(`I${resisterRow}`).setValue(remarks ?? '');
 
-  // ログを履く
-
-  // クライアントに返却する
+  // TODO: ログを履く
 }
 
-function test() {
-  Logger.log("");
+// TODO: 共通化
+function getBalance() {
+    // 入力日をシステム値から取得
+  const year = new Date().getFullYear();
+  const month = new Date().getMonth()+1;
+  const date = new Date().getDate()
+
+  // 入力するシートの情報を取得
+  const sheet_id = getFamilySheetId();
+  const ss = SpreadsheetApp.openById(sheet_id);
+  return ss.getSheetByName(`${year}/${month}`).getRange('L29').getValue();
 }
+
+function getSuccessMessage(inputMessage, balance) {
+  let msg = '';
+  msg += `《${inputMessage}》の登録が完了したよ！\n`;
+  msg += `残り ¥${balance.toLocaleString()} だよ${getRandomEmoji()}\n`;
+  if (balance >= 0) {
+    msg += `${getRandomReplyMessage()}`;
+  } else {
+    msg += '節約しないと！'
+  }
+  return msg;
+}
+
+function getRandomReplyMessage() {
+  return ADDITIONAL_MESSAGE[Math.floor(Math.random() * ADDITIONAL_MESSAGE.length)];
+}
+
+function getRandomEmoji() {
+  return EMOJI[Math.floor(Math.random() * EMOJI.length)];
+}
+

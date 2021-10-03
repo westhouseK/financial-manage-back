@@ -1,5 +1,27 @@
+/** キャッシュはプログラムで一意のため定数 */
+const CACHE = CacheService.getScriptCache();
+
+/** キャッシュの時間 */
+const CACHE_TIME = 60 * 10;
+
 /** 登録可能なカテゴリ */
-const Category = ['食費', '日用品', '交際費', 'その他']
+const Category = ['食費', '日用品', '交際費', 'その他'];
+
+/** 追加のメッセージ */
+const ADDITIONAL_MESSAGE = [
+  'すぐに入力できて偉い！',
+  '節約できてて偉い！',
+  'エコバックは持っていってる？チリツモだよ！',
+  'いい感じ！',
+  '家計簿をつけることが大事なんだよ！',
+  'お金貯めて美味しいもの食べようね！',
+  'お金貯まったら、旅行に行こう！！'
+];
+
+const EMOJI = [
+  '😉', '😚', '😙', '🥰', '🤗', '🐶', '🐹', '🦊'
+]
+
 
 /** 家計簿シートのテンプレートシート名 */
-const TEMPLATE_SHEET = 'template'
+const TEMPLATE_SHEET = 'template';
